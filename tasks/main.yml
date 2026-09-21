@@ -1,0 +1,68 @@
+---
+- name: Install PostgreSQL packages
+  ansible.builtin.apt:
+    name:
+      - "{{ postgresql_package_name }}"
+      - "{{ postgresql_client_package_name }}"
+      - python3-psycopg2
+    state: present
+    update_cache: true
+
+- name: Ensure PostgreSQL service is enabled and started
+  ansible.builtin.service:
+    name: "{{ postgresql_service_name }}"
+    state: started
+    enabled: true
+
+- name: Validate PostgreSQL credentials
+  ansible.builtin.assert:
+    that:
+      - postgresql_password | length > 0
+    fail_msg: postgresql_password must be provided and must not be empty.
+
+- name: Configure PostgreSQL listen addresses
+  ansible.builtin.lineinfile:
+    path: "{{ postgresql_config_path }}"
+    regexp: '^#?listen_addresses\s*='
+    line: "listen_addresses = '{{ postgresql_listen_addresses }}'"
+    owner: postgres
+    group: postgres
+    mode: '0644'
+  notify: Restart PostgreSQL
+
+- name: Configure PostgreSQL port
+  ansible.builtin.lineinfile:
+    path: "{{ postgresql_config_path }}"
+    regexp: '^#?port\s*='
+    line: "port = {{ postgresql_port }}"
+    owner: postgres
+    group: postgres
+    mode: '0644'
+  notify: Restart PostgreSQL
+
+- name: Allow password authentication from configured network
+  ansible.builtin.lineinfile:
+    path: "{{ postgresql_hba_path }}"
+    line: "host all all {{ postgresql_pg_hba_address }} scram-sha-256"
+    insertafter: EOF
+    owner: postgres
+    group: postgres
+    mode: '0640'
+  notify: Restart PostgreSQL
+
+- name: Create PostgreSQL application user
+  become: true
+  become_user: postgres
+  community.postgresql.postgresql_user:
+    name: "{{ postgresql_user }}"
+    password: "{{ postgresql_password }}"
+    encrypted: true
+    state: present
+
+- name: Create PostgreSQL application database
+  become: true
+  become_user: postgres
+  community.postgresql.postgresql_db:
+    name: "{{ postgresql_database }}"
+    owner: "{{ postgresql_user }}"
+    state: present

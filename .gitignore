@@ -1,0 +1,6 @@
+*.retry
+.ansible/
+.cache/
+.venv/
+__pycache__/
+*.log

@@ -1,0 +1,22 @@
+---
+galaxy_info:
+  role_name: postgresql
+  namespace: rmp2000
+  author: rmp2000
+  description: Install and configure PostgreSQL on Debian-based systems.
+  license: Apache-2.0
+  min_ansible_version: "2.12"
+  platforms:
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  galaxy_tags:
+    - database
+    - postgresql
+    - sql
+dependencies: []
