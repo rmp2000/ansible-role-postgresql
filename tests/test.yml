@@ -1,11 +1,35 @@
 ---
-- name: Test PostgreSQL role
+- name: Test PostgreSQL role with a non-default port
   hosts: localhost
   connection: local
   become: true
   vars:
+    postgresql_database: role_test_db
+    postgresql_user: role_test_user
     postgresql_password: test-password-only
+    postgresql_port: 55432
   tasks:
     - name: Include the role from this checkout
       ansible.builtin.include_role:
         name: "{{ playbook_dir }}/.."
+
+    - name: Repeat the role on the configured port
+      ansible.builtin.include_role:
+        name: "{{ playbook_dir }}/.."
+
+    - name: Verify application login over TCP
+      community.postgresql.postgresql_query:
+        login_host: 127.0.0.1
+        login_port: "{{ postgresql_port }}"
+        login_user: "{{ postgresql_user }}"
+        login_password: "{{ postgresql_password }}"
+        login_db: "{{ postgresql_database }}"
+        query: SELECT current_user, current_database()
+      register: postgresql_login_check
+      no_log: true
+
+    - name: Verify the application user and database
+      ansible.builtin.assert:
+        that:
+          - postgresql_login_check.query_result[0].current_user == postgresql_user
+          - postgresql_login_check.query_result[0].current_database == postgresql_database

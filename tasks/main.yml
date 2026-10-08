@@ -1,4 +1,10 @@
 ---
+- name: Validate PostgreSQL credentials
+  ansible.builtin.assert:
+    that:
+      - postgresql_password | length > 0
+    fail_msg: postgresql_password must be provided and must not be empty.
+
 - name: Install PostgreSQL packages
   ansible.builtin.apt:
     name:
@@ -13,12 +19,6 @@
     name: "{{ postgresql_service_name }}"
     state: started
     enabled: true
-
-- name: Validate PostgreSQL credentials
-  ansible.builtin.assert:
-    that:
-      - postgresql_password | length > 0
-    fail_msg: postgresql_password must be provided and must not be empty.
 
 - name: Configure PostgreSQL listen addresses
   ansible.builtin.lineinfile:
@@ -50,10 +50,20 @@
     mode: '0640'
   notify: Restart PostgreSQL
 
+- name: Apply PostgreSQL configuration before connecting
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for the configured PostgreSQL socket
+  ansible.builtin.wait_for:
+    path: "/var/run/postgresql/.s.PGSQL.{{ postgresql_port }}"
+    timeout: 30
+
 - name: Create PostgreSQL application user
   become: true
   become_user: postgres
+  no_log: true
   community.postgresql.postgresql_user:
+    login_port: "{{ postgresql_port }}"
     name: "{{ postgresql_user }}"
     password: "{{ postgresql_password }}"
     encrypted: true
@@ -63,6 +73,7 @@
   become: true
   become_user: postgres
   community.postgresql.postgresql_db:
+    login_port: "{{ postgresql_port }}"
     name: "{{ postgresql_database }}"
     owner: "{{ postgresql_user }}"
     state: present

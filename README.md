@@ -47,3 +47,13 @@ The role is intended to be imported into Ansible Galaxy as `rmp2000.postgresql` 
   roles:
     - role: postgresql
 ```
+
+## Supported package versions
+
+The default PostgreSQL 14 packages are available on Ubuntu 22.04 (Jammy).
+For other distributions, set `postgresql_version` to a version available in
+the configured APT repositories, or configure the PostgreSQL repository first.
+The role does not add third-party APT repositories.
+
+The integration playbook uses port 55432, applies the role twice, and checks
+TCP authentication as the application user. Run it only on a disposable test VM.
